@@ -2,6 +2,8 @@
 
 import { DownloadIcon, EditIcon, EllipsisIcon, LoaderCircleIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox as CheckBoxOriginal } from "@/components/ui/checkbox";
@@ -9,8 +11,7 @@ import { Input } from "@/components/ui/input";
 
 import { FuzzyTimeDisplay } from "@/components/common/fuzzy-time";
 import { Pagination } from "@/components/common/pagination";
-import { Doc, fetchDocs } from "@/lib/api/docs";
-import { useFetchedState } from "@/lib/hooks/fetch";
+import { Doc, DocOrderBy, deleteDoc, fetchDocs } from "@/lib/api/docs";
 
 function Checkbox(props: React.ComponentProps<typeof CheckBoxOriginal>) {
   // Workaround for https://github.com/shadcn-ui/ui/issues/2604
@@ -21,7 +22,7 @@ function Checkbox(props: React.ComponentProps<typeof CheckBoxOriginal>) {
   );
 }
 
-function Actions({ doc }: { doc: Doc }) {
+function Actions({ doc, onDeleted }: { doc: Doc; onDeleted: (id: string) => void }) {
   if (doc.status === "pending") {
     return (
       <div className="flex items-center justify-center text-xs">
@@ -39,7 +40,18 @@ function Actions({ doc }: { doc: Doc }) {
       <Link title="Publish" href={`/docs/${doc.id}/publish`}>
         <DownloadIcon className="size-4" />
       </Link>
-      <button title="Delete">
+      <button
+        title="Delete"
+        onClick={async () => {
+          try {
+            await deleteDoc(doc.id);
+            onDeleted(doc.id);
+            toast.success("Document deleted");
+          } catch {
+            toast.error("Failed to delete document");
+          }
+        }}
+      >
         <Trash2Icon className="size-4" />
       </button>
       <button title="More">
@@ -50,14 +62,60 @@ function Actions({ doc }: { doc: Doc }) {
 }
 
 export default function () {
-  const [docs, _] = useFetchedState([], fetchDocs, []);
+  const [docs, setDocs] = useState<Doc[]>([]);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const pageSize = 20;
+  const orderBy: DocOrderBy = "-created";
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    let canceled = false;
+
+    const load = async () => {
+      try {
+        const result = await fetchDocs({ search, page, pageSize, orderBy });
+        if (canceled) return;
+        setDocs(result.items);
+        setHasNextPage(result.hasNextPage);
+      } catch {
+        if (!canceled) toast.error("Failed to fetch documents");
+      }
+    };
+
+    void load();
+
+    const timer = setInterval(() => {
+      load().catch(() => {});
+    }, 3000);
+
+    return () => {
+      canceled = true;
+      clearInterval(timer);
+    };
+  }, [search, page]);
 
   return (
     <main className="flex flex-col max-md:gap-4 max-md:p-4 md:gap-8 md:p-8">
       <div className="contents md:flex md:items-center md:justify-between">
         <div className="relative">
           <SearchIcon className="text-muted-foreground absolute top-2.5 left-3 size-4" />
-          <Input type="text" className="pl-10" placeholder="Search documents..." />
+          <Input
+            type="text"
+            className="pl-10"
+            placeholder="Search documents..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
         </div>
         <Button asChild>
           <Link href="/docs/new">
@@ -100,7 +158,7 @@ export default function () {
                   <FuzzyTimeDisplay value={doc.created} />
                 </td>
                 <td>
-                  <Actions doc={doc} />
+                  <Actions doc={doc} onDeleted={(id) => setDocs((prev) => prev.filter((item) => item.id !== id))} />
                 </td>
               </tr>
             ))}
@@ -113,7 +171,7 @@ export default function () {
         </table>
       </div>
 
-      <Pagination />
+      <Pagination page={page} hasNextPage={hasNextPage} onPageChange={setPage} />
     </main>
   );
 }

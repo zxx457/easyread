@@ -21,6 +21,8 @@ export default (phase: string): NextConfig => {
   generateBreadCrumbs(phase, "src/app/(dashboard)");
 
   return {
-    /* config options here */
+    env: {
+      BACKEND_BASE_URL: process.env.BACKEND_BASE_URL ?? "http://134.115.205.55:5050",
+    },
   };
 };

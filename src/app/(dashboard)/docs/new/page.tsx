@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { ImageGenerationOptions } from "@/components/app/image-generation-options";
+import { createDocument, uploadDocument } from "@/lib/api/docs";
 import { useStableMemo } from "@/lib/hooks/stable-memo";
 import { cn, pickFiles } from "@/lib/utils";
 
@@ -41,12 +42,32 @@ export default function () {
   };
 
   const [enableImages, setEnableImages] = useState(true);
+  const [languageStyle, setLanguageStyle] = useState<"plain" | "easyread">("easyread");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleCreateDocument = () => {
-    toast.success(
-      "Document Successfully Created. Once the initial processing is done, you can export or edit the result.",
-    );
-    router.push("/docs");
+  const handleCreateDocument = async () => {
+    if (files.length === 0) {
+      toast.error("Please select at least one file first.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const uploadedIds = await Promise.all(files.map((file) => uploadDocument(file)));
+      await createDocument({
+        files: uploadedIds,
+        language_style: languageStyle,
+        auto_generate_images: enableImages,
+      });
+
+      toast.success("Document queued for processing.");
+      router.push("/docs");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unexpected error while creating document.";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -93,13 +114,13 @@ export default function () {
         <div className="flex flex-1 flex-col gap-4 max-md:contents">
           <div className="flex flex-col gap-2">
             <label className="text-sm">Language Style</label>
-            <Select>
+            <Select value={languageStyle} onValueChange={(value) => setLanguageStyle(value as "plain" | "easyread")}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Please Select..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="library">Plain English</SelectItem>
-                <SelectItem value="stable-diffusion">Easy Read</SelectItem>
+                <SelectItem value="plain">Plain English</SelectItem>
+                <SelectItem value="easyread">Easy Read</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -116,7 +137,9 @@ export default function () {
             <span> while the others provide additional context.</span>
           </div>
         )}
-        <Button onClick={handleCreateDocument}>Upload &amp; Process</Button>
+        <Button onClick={handleCreateDocument} disabled={isSubmitting || files.length === 0}>
+          {isSubmitting ? "Processing..." : "Upload & Process"}
+        </Button>
       </div>
     </main>
   );

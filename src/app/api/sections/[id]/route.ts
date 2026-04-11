@@ -2,7 +2,7 @@ import { BACKEND_BASE_URL } from "@/lib/config/backend";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const response = await fetch(new URL(`/api/docs/${id}`, BACKEND_BASE_URL), {
+  const response = await fetch(new URL(`/api/sections/${id}`, BACKEND_BASE_URL), {
     method: "GET",
     cache: "no-store",
   });
@@ -18,7 +18,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
   const payload = await request.text();
 
-  const response = await fetch(new URL(`/api/docs/${id}`, BACKEND_BASE_URL), {
+  const response = await fetch(new URL(`/api/sections/${id}`, BACKEND_BASE_URL), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: payload,
@@ -33,7 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const response = await fetch(new URL(`/api/docs/${id}`, BACKEND_BASE_URL), {
+  const response = await fetch(new URL(`/api/sections/${id}`, BACKEND_BASE_URL), {
     method: "DELETE",
   });
 

@@ -12,7 +12,7 @@ import {
   XIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -31,9 +31,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { ImageGenerationOptions } from "@/components/app/image-generation-options";
-import { Doc, fetchDoc } from "@/lib/api/docs";
+import { Doc, fetchDoc, updateDocTitle } from "@/lib/api/docs";
 import { fetchImages } from "@/lib/api/images";
-import { Section, addNewSection, fetchSections } from "@/lib/api/sections";
+import { Section, fetchSections } from "@/lib/api/sections";
 import { useFetchedState } from "@/lib/hooks/fetch";
 import { cn, pickFile } from "@/lib/utils";
 
@@ -87,6 +87,7 @@ function LibraryImagePickerDialog({ section, forceRerender }: { section: Section
 
 function SectionsEditor(
   doc_id: string,
+  isProcessing: boolean,
   selectedSection: Section | null,
   setSelectedSection: React.Dispatch<React.SetStateAction<Section | null>>,
   sections: Section[],
@@ -99,20 +100,47 @@ function SectionsEditor(
           <div className="group relative aspect-[4/3] w-1/3 overflow-hidden rounded">
             <img src={section.image} className="size-full object-cover" />
             <button
+              disabled={isProcessing}
               className="absolute inset-0 grid place-items-center bg-black/75 text-white transition-opacity not-group-hover:opacity-0"
               onClick={() => setSelectedSection(section)}
             >
               <span className="text-sm">Click to edit</span>
             </button>
           </div>
-          <Textarea className="flex-1 resize-none" defaultValue={section.text}></Textarea>
+          <Textarea
+            className="flex-1 resize-none"
+            value={section.text}
+            disabled={isProcessing}
+            onChange={(e) => {
+              const nextText = e.target.value;
+              // Keep section content in local state; publish step can later persist it.
+              setSections((prev) => {
+                const copy = [...prev];
+                const i = copy.findIndex((s) => s.id === section.id);
+                if (i >= 0) copy[i].text = nextText;
+                return copy;
+              });
+            }}
+          />
         </div>
       ))}
       <Button
+        disabled={isProcessing}
         onClick={() => {
-          addNewSection(doc_id).then((section) => {
-            setSections([...sections, section]);
-          });
+          // Append locally first. Backend persistence should happen at the Publish step.
+          const tempId =
+            typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `temp-${Date.now()}`;
+          setSections((prev) => [
+            ...prev,
+            {
+              doc_id,
+              id: tempId,
+              order: prev.length,
+              text: "",
+              image: "https://placehold.co/600x400?text=Image",
+              candidates: [],
+            },
+          ]);
         }}
       >
         <PlusIcon />
@@ -187,9 +215,11 @@ function ImageEditor({
 
 function DocMetadataEdit({
   doc,
+  isProcessing,
   setDoc,
 }: {
   doc?: Doc;
+  isProcessing: boolean;
   setDoc: React.Dispatch<React.SetStateAction<Doc | undefined>>;
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -202,6 +232,7 @@ function DocMetadataEdit({
       <div className="flex items-center gap-4 overflow-hidden">
         <span className="truncate text-sm">{doc.title}</span>
         <button
+          disabled={isProcessing}
           title="Edit Document Name"
           className="text-muted-foreground hover:text-primary"
           onClick={() => {
@@ -216,17 +247,23 @@ function DocMetadataEdit({
 
   return (
     <div className="flex items-center gap-2 max-md:absolute max-md:inset-0 max-md:z-11 max-md:bg-[inherit] max-md:p-[inherit]">
-      <Input value={inputText} onChange={({ target: { value } }) => setInputText(value)} />
+      <Input disabled={isProcessing} value={inputText} onChange={({ target: { value } }) => setInputText(value)} />
       <Button
+        disabled={isProcessing}
         size="sm"
         onClick={async () => {
-          setIsEditing(false);
-          setDoc(() => ({ ...doc, title: inputText }));
+          try {
+            await updateDocTitle(doc.id, inputText);
+            setDoc(() => ({ ...doc, title: inputText }));
+            setIsEditing(false);
+          } catch {
+            setIsEditing(false);
+          }
         }}
       >
         Save
       </Button>
-      <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+      <Button disabled={isProcessing} size="sm" variant="outline" onClick={() => setIsEditing(false)}>
         Cancel
       </Button>
     </div>
@@ -243,13 +280,29 @@ export default function ({ params }: { params: Promise<{ id: string }> }) {
 
   const [_unused, _setUnused] = useState(0);
   const forceRerender = () => _setUnused((v) => v + 1);
+  const isProcessing = doc?.status === "pending";
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      fetchDoc(doc_id)
+        .then((latest) => setDoc(latest))
+        .catch(() => {});
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [doc_id, setDoc]);
 
   return (
     <main className="flex h-[var(--page-height)] flex-col">
       <div className="flex flex-1 overflow-hidden max-md:contents">
         <div className="flex-1 overflow-y-auto">
           <article className="flex flex-col gap-4 max-md:p-4 md:p-8">
-            {SectionsEditor(doc_id, selectedSection, setSelectedSection, sections, setSections)}
+            {isProcessing && (
+              <div className="bg-muted text-muted-foreground rounded border px-4 py-2 text-sm">
+                This document is still processing. Editing actions are temporarily disabled.
+              </div>
+            )}
+            {SectionsEditor(doc_id, isProcessing, selectedSection, setSelectedSection, sections, setSections)}
           </article>
         </div>
         <div
@@ -267,7 +320,7 @@ export default function ({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
       <div className="bg-background sticky bottom-0 z-10 flex h-16 items-center border-t max-md:gap-4 max-md:px-4 md:gap-8 md:px-8">
-        <DocMetadataEdit doc={doc} setDoc={setDoc} />
+        <DocMetadataEdit doc={doc} isProcessing={isProcessing} setDoc={setDoc} />
         <Tooltip>
           <TooltipTrigger className="ml-auto flex items-center gap-2 text-xs [&_svg]:size-4">
             {state % 3 === 0 ? (
@@ -295,8 +348,13 @@ export default function ({ params }: { params: Promise<{ id: string }> }) {
                 : "Error when saving your changes"}
           </TooltipContent>
         </Tooltip>
-        <Button asChild>
-          <Link href={`/docs/${doc_id}/publish`}>
+        <Button asChild disabled={isProcessing}>
+          <Link
+            href={isProcessing ? "#" : `/docs/${doc_id}/publish`}
+            onClick={(e) => {
+              if (isProcessing) e.preventDefault();
+            }}
+          >
             <ShareIcon />
             Publish
           </Link>

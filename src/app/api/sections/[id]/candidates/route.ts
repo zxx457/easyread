@@ -2,7 +2,7 @@ import { BACKEND_BASE_URL } from "@/lib/config/backend";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const response = await fetch(new URL(`/api/documents/${id}/sections`, BACKEND_BASE_URL), {
+  const response = await fetch(new URL(`/api/sections/${id}/candidates`, BACKEND_BASE_URL), {
     method: "GET",
     cache: "no-store",
   });
@@ -14,10 +14,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   });
 }
 
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const response = await fetch(new URL(`/api/documents/${id}/sections`, BACKEND_BASE_URL), {
+  const payload = await request.text();
+
+  const response = await fetch(new URL(`/api/sections/${id}/candidates`, BACKEND_BASE_URL), {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
   });
 
   const body = await response.text();
