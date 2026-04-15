@@ -22,7 +22,7 @@ export default (phase: string): NextConfig => {
 
   return {
     env: {
-      BACKEND_BASE_URL: process.env.BACKEND_BASE_URL ?? "http://134.115.205.55:5050",
+      NEXT_PUBLIC_API_URL: process.env.BACKEND_BASE_URL ?? "http://10.90.196.214:5050",
     },
   };
 };

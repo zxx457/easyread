@@ -35,7 +35,7 @@ function fromDto(section: RawSectionDTO, order: number): Section {
 /**************************************************/
 
 export async function fetchSections(doc_id: string): Promise<Section[]> {
-  const sectionIdsRes = await fetch(`/api/docs/${doc_id}/sections`, { cache: "no-store" });
+  const sectionIdsRes = await fetch(`/api/documents/${doc_id}/sections`, { cache: "no-store" });
   if (!sectionIdsRes.ok) throw new Error("Failed to fetch section IDs");
   const sectionIds = (await sectionIdsRes.json()) as string[];
 
@@ -85,11 +85,11 @@ export async function fetchSection(id: string, order = 0): Promise<Section> {
 }
 
 export async function addNewSection(doc_id: string): Promise<Section> {
-  const res = await fetch(`/api/docs/${doc_id}/sections`);
+  const res = await fetch(`/api/documents/${doc_id}/sections`);
   if (!res.ok) throw new Error("Failed to fetch sections");
   const currentIds = (await res.json()) as string[];
 
-  const createRes = await fetch(`/api/docs/${doc_id}/sections`, {
+  const createRes = await fetch(`/api/documents/${doc_id}/sections`, {
     method: "POST",
   });
   if (!createRes.ok) throw new Error("Failed to add new section");
@@ -115,7 +115,7 @@ export async function reorderSections(
   doc_id: string,
   payload: { target: string; after?: string | null; before?: string | null },
 ): Promise<void> {
-  const res = await fetch(`/api/docs/${doc_id}/sections/reorder`, {
+  const res = await fetch(`/api/documents/${doc_id}/sections/reorder`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

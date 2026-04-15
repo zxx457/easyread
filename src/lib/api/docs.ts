@@ -51,7 +51,7 @@ export function fromDto(dto: RawDocDTO): Doc {
 // Fetch docs page from backend array response
 export async function fetchDocs(params: FetchDocsParams = {}): Promise<FetchDocsResult> {
   const page = Math.max(params.page ?? 1, 1);
-  const pageSize = Math.max(params.pageSize ?? 20, 1);
+  const pageSize = Math.max(params.pageSize ?? 10, 1);
   const query = new URLSearchParams({
     page: String(page),
     page_size: String(pageSize),
@@ -59,11 +59,13 @@ export async function fetchDocs(params: FetchDocsParams = {}): Promise<FetchDocs
   });
   if (params.search?.trim()) query.set("search", params.search.trim());
 
-  const res = await fetch(`/api/docs?${query.toString()}`, { cache: "no-store" });
+  const res = await fetch(`/api/documents?${query.toString()}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch documents");
 
   const dtos: RawDocDTO[] = await res.json();
   const items = dtos.map(fromDto).filter((doc) => !!doc.id);
+  console.log(items.length);
+
   return {
     items,
     page,
@@ -74,7 +76,7 @@ export async function fetchDocs(params: FetchDocsParams = {}): Promise<FetchDocs
 
 // Fetch a single doc
 export async function fetchDoc(id: string): Promise<Doc> {
-  const res = await fetch(`/api/docs/${id}`, { cache: "no-store" });
+  const res = await fetch(`/api/documents/${id}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch document");
 
   const dto: RawDocDTO = await res.json();
@@ -107,7 +109,7 @@ export interface CreateDocumentPayload {
 }
 
 export async function createDocument(payload: CreateDocumentPayload): Promise<string> {
-  const res = await fetch("/api/docs", {
+  const res = await fetch("/api/documents", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -124,7 +126,7 @@ export async function createDocument(payload: CreateDocumentPayload): Promise<st
 }
 
 export async function updateDocTitle(id: string, title: string): Promise<void> {
-  const res = await fetch(`/api/docs/${id}`, {
+  const res = await fetch(`/api/documents/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title }),
@@ -133,6 +135,6 @@ export async function updateDocTitle(id: string, title: string): Promise<void> {
 }
 
 export async function deleteDoc(id: string): Promise<void> {
-  const res = await fetch(`/api/docs/${id}`, { method: "DELETE" });
+  const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete document");
 }

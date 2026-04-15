@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const payload = await request.text();
-  const response = await fetch(new URL("/api/docs", BACKEND_BASE_URL), {
+  const response = await fetch(new URL("/api/documents", BACKEND_BASE_URL), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: payload,
