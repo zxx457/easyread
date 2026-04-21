@@ -47,11 +47,11 @@ export default function () {
   const [query, setQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const normalizedQuery = query.trim();
-  const isSubmitDisabled = isSubmitting || (files.length === 0 && normalizedQuery.length === 0);
+  const isSubmitDisabled = isSubmitting || normalizedQuery.length === 0;
 
   const handleCreateDocument = async () => {
-    if (files.length === 0 && normalizedQuery.length === 0) {
-      toast.error("Please provide a query or upload at least one file.");
+    if (normalizedQuery.length === 0) {
+      toast.error("Please provide a query.");
       return;
     }
 
