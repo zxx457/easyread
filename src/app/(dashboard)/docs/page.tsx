@@ -150,9 +150,15 @@ export default function () {
                   <Checkbox />
                 </td>
                 <td>
-                  <Link href={`/docs/${doc.id}`} className="hover:text-primary hover:underline">
-                    {doc.title}
-                  </Link>
+                  {doc.status === "pending" ? (
+                    <span className="text-muted-foreground cursor-default" title="Document is still processing">
+                      {doc.title}
+                    </span>
+                  ) : (
+                    <Link href={`/docs/${doc.id}`} className="hover:text-primary hover:underline">
+                      {doc.title}
+                    </Link>
+                  )}
                 </td>
                 <td>
                   <FuzzyTimeDisplay value={doc.created} />
