@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 import { ImageGenerationOptions } from "@/components/app/image-generation-options";
 import { createDocument, uploadDocument } from "@/lib/api/docs";
@@ -43,19 +44,23 @@ export default function () {
 
   const [enableImages, setEnableImages] = useState(true);
   const [languageStyle, setLanguageStyle] = useState<"plain" | "easyread">("easyread");
+  const [query, setQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const normalizedQuery = query.trim();
+  const isSubmitDisabled = isSubmitting || (files.length === 0 && normalizedQuery.length === 0);
 
   const handleCreateDocument = async () => {
-    if (files.length === 0) {
-      toast.error("Please select at least one file first.");
+    if (files.length === 0 && normalizedQuery.length === 0) {
+      toast.error("Please provide a query or upload at least one file.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const uploadedIds = await Promise.all(files.map((file) => uploadDocument(file)));
+      const uploadedIds = files.length > 0 ? await Promise.all(files.map((file) => uploadDocument(file))) : undefined;
       await createDocument({
         files: uploadedIds,
+        query: normalizedQuery,
         language_style: languageStyle,
         auto_generate_images: enableImages,
       });
@@ -137,7 +142,16 @@ export default function () {
             <span> while the others provide additional context.</span>
           </div>
         )}
-        <Button onClick={handleCreateDocument} disabled={isSubmitting || files.length === 0}>
+        <div className="flex flex-col gap-2">
+          <label className="text-sm">Query</label>
+          <Textarea
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Describe what you want to generate"
+            className="min-h-36"
+          />
+        </div>
+        <Button onClick={handleCreateDocument} disabled={isSubmitDisabled}>
           {isSubmitting ? "Processing..." : "Upload & Process"}
         </Button>
       </div>

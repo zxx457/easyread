@@ -10,16 +10,21 @@ import {
   SparklesIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { Children } from "react";
+import { useRouter } from "next/navigation";
+import { Children, FormEvent, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 import Logo from "@/components/app/app-logo";
+import { fetchSession, login } from "@/lib/api/users";
 import { cn } from "@/lib/utils";
 import { isMaxMdScreenAtom } from "@/stores/responsive";
 
-function Header() {
+function Header({ onAuthAction }: { onAuthAction: () => void }) {
   return (
     <header className="bg-secondary text-secondary-foreground sticky top-0 z-10 flex h-[var(--header-height)] items-center gap-8 px-8">
       <Logo />
@@ -37,8 +42,8 @@ function Header() {
           <Link href="#pricing">Pricing</Link>
         </Button>
       </nav>
-      <Button asChild variant="outline" className="ml-auto bg-transparent font-semibold">
-        <Link href="/docs">Sign In</Link>
+      <Button variant="outline" className="ml-auto bg-transparent font-semibold" onClick={onAuthAction}>
+        Sign In
       </Button>
     </header>
   );
@@ -106,9 +111,50 @@ function CardItem({ title, text, image }: { title: string; text: string; image: 
 }
 
 export default function Page() {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoginSubmitting, setIsLoginSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchSession()
+      .then(setIsAuthenticated)
+      .catch(() => setIsAuthenticated(false))
+      .finally(() => setIsAuthChecked(true));
+  }, []);
+
+  const handleDashboardAction = () => {
+    if (!isAuthChecked) return;
+    if (isAuthenticated) {
+      router.push("/docs");
+      return;
+    }
+    setIsLoginOpen(true);
+  };
+
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsLoginSubmitting(true);
+    try {
+      await login({ email, password });
+      setIsAuthenticated(true);
+      setIsLoginOpen(false);
+      toast.success("Logged in successfully");
+      router.push("/docs");
+      router.refresh();
+    } catch {
+      toast.error("Invalid email or password");
+    } finally {
+      setIsLoginSubmitting(false);
+    }
+  };
+
   return (
     <>
-      <Header />
+      <Header onAuthAction={handleDashboardAction} />
 
       <Section>
         <div className="bg-background text-foreground flex items-center gap-2 rounded-full border px-4 py-2">
@@ -121,11 +167,9 @@ export default function Page() {
           and supportive visuals. Our generator uses AI to automatically transform your documents into Easy Read
           versions — accurate, fast, and inclusive.
         </p>
-        <Button asChild className="h-16 py-0 has-[>svg]:px-8">
-          <Link href="/docs">
-            <span className="text-lg font-bold">Get Started</span>
-            <ArrowRightIcon />
-          </Link>
+        <Button className="h-16 py-0 has-[>svg]:px-8" onClick={handleDashboardAction} disabled={!isAuthChecked}>
+          <span className="text-lg font-bold">Get Started</span>
+          <ArrowRightIcon />
         </Button>
         <Button asChild variant="link" className="text-muted-foreground h-fit p-0 underline">
           <Link href="#about-easy-read">Learn About Easy Read</Link>
@@ -330,15 +374,57 @@ export default function Page() {
           Use AI to create Easy Read versions of your documents in minutes — compliant with standards, clear, and ready
           to share.
         </p>
-        <Button asChild className="h-16 py-0 has-[>svg]:px-8">
-          <Link href="/docs">
-            <span className="text-lg font-bold">Try It Now</span>
-            <ArrowRightIcon />
-          </Link>
+        <Button className="h-16 py-0 has-[>svg]:px-8" onClick={handleDashboardAction} disabled={!isAuthChecked}>
+          <span className="text-lg font-bold">Try It Now</span>
+          <ArrowRightIcon />
         </Button>
       </Section>
 
       <Footer />
+
+      <Dialog
+        open={isLoginOpen}
+        onOpenChange={(open) => {
+          setIsLoginOpen(open);
+          if (!open) {
+            setPassword("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign in</DialogTitle>
+            <DialogDescription>
+              Use your account to access the dashboard. Demo credentials: jane.doe@uwa.edu.au / password123
+            </DialogDescription>
+          </DialogHeader>
+          <form className="flex flex-col gap-4" onSubmit={handleLogin}>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm">Email</label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@example.com"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm">Password</label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                required
+              />
+            </div>
+            <Button type="submit" disabled={isLoginSubmitting}>
+              {isLoginSubmitting ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

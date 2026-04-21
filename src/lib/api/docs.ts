@@ -102,7 +102,8 @@ export async function uploadDocument(file: File): Promise<string> {
 }
 
 export interface CreateDocumentPayload {
-  files: string[];
+  files?: string[];
+  query: string;
   language_style: "plain" | "easyread";
   auto_generate_images: boolean;
   image_generation_options?: Record<string, unknown>;

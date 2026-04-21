@@ -3,18 +3,21 @@
 import { useAtom, useAtomValue } from "jotai";
 import { FileTextIcon, ImagesIcon, LogOutIcon, SettingsIcon } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
 import Logo from "@/components/app/app-logo";
 import Transition from "@/components/common/transition";
-import { fetchCurrentUser } from "@/lib/api/users";
+import { fetchCurrentUser, logout } from "@/lib/api/users";
 import { useFetchedState } from "@/lib/hooks/fetch";
 import { isMaxMdScreenAtom } from "@/stores/responsive";
 import { isMobileSidebarOpenAtom } from "@/stores/sidebar";
 
 export default function () {
+  const router = useRouter();
   const isMobileMode = useAtomValue(isMaxMdScreenAtom);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useAtom(isMobileSidebarOpenAtom);
 
@@ -95,12 +98,19 @@ export default function () {
                 variant="ghost"
                 size="lg"
                 className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-12 justify-start gap-3 text-base"
-                asChild
+                onClick={async () => {
+                  try {
+                    await logout();
+                    onNavLinkClick();
+                    router.push("/");
+                    router.refresh();
+                  } catch {
+                    toast.error("Failed to logout");
+                  }
+                }}
               >
-                <Link href="/" onClick={onNavLinkClick}>
-                  <LogOutIcon />
-                  <span>Logout</span>
-                </Link>
+                <LogOutIcon />
+                <span>Logout</span>
               </Button>
             </nav>
           </div>

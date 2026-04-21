@@ -5,3 +5,8 @@ export const me: User = {
   avatar: "https://randomuser.me/api/portraits/women/44.jpg",
   email: "jane.doe@uwa.edu.au",
 };
+
+export const mockCredentials = {
+  email: "jane.doe@uwa.edu.au",
+  password: "password123",
+};

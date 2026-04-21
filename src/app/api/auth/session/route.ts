@@ -1,21 +1,12 @@
 import { cookies } from "next/headers";
 
-import { me } from "@/app/api/(mock)/users";
-import { toDto } from "@/lib/api/users";
 import { AUTH_COOKIE_NAME, AUTH_COOKIE_VALUE } from "@/lib/auth/session";
 
 export async function GET() {
   const cookieStore = await cookies();
   const isAuthenticated = cookieStore.get(AUTH_COOKIE_NAME)?.value === AUTH_COOKIE_VALUE;
-  if (!isAuthenticated) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
 
-  const dto = toDto(me);
-  return new Response(JSON.stringify(dto), {
+  return new Response(JSON.stringify({ isAuthenticated }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });

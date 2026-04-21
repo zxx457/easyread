@@ -1,7 +1,17 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
 import Header from "@/components/app/dashboard-header";
 import Sidebar from "@/components/app/dashboard-sidebar";
+import { AUTH_COOKIE_NAME, AUTH_COOKIE_VALUE } from "@/lib/auth/session";
 
-export default function ({ children, breadcrumbs }: { children: React.ReactNode; breadcrumbs: React.ReactNode }) {
+export default async function ({ children, breadcrumbs }: { children: React.ReactNode; breadcrumbs: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const isAuthenticated = cookieStore.get(AUTH_COOKIE_NAME)?.value === AUTH_COOKIE_VALUE;
+  if (!isAuthenticated) {
+    redirect("/");
+  }
+
   return (
     <div className="flex h-screen items-stretch overflow-hidden max-md:contents">
       <Sidebar />
