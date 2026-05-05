@@ -10,3 +10,6 @@ package-lock.json
 
 # artifacts
 next-env.d.ts
+
+# instances
+mock-server/data/*

@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
-import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from "next/constants";
+import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 import BreadcrumbGenerator from "nextjs-dynamic-breadcrumbs/generator";
 
 function generateBreadCrumbs(phase: string, path: string) {
-  // Run only in dev or build phases
-  if (phase === PHASE_DEVELOPMENT_SERVER || phase === PHASE_PRODUCTION_BUILD) {
+  // Run only in dev phase to avoid watcher-related EMFILE in lint/build.
+  if (phase === PHASE_DEVELOPMENT_SERVER) {
     // Prevent duplicate execution when Next.js reloads config multiple times
     if (process.env.__BREADCRUMBS_GENERATED__) return;
     const generator = new BreadcrumbGenerator(path);
@@ -22,7 +22,7 @@ export default (phase: string): NextConfig => {
 
   return {
     env: {
-      NEXT_PUBLIC_API_URL: process.env.BACKEND_BASE_URL ?? "http://10.90.196.214:5050",
+      NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? process.env.BACKEND_BASE_URL ?? "http://localhost:5050",
     },
   };
 };
