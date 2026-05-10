@@ -136,6 +136,6 @@ export async function updateDocTitle(id: string, title: string): Promise<void> {
 }
 
 export async function deleteDoc(id: string): Promise<void> {
-  const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
+  const res = await fetch(`/api/documents/${id}`, { method: "DELETE", cache: "no-store" });
   if (!res.ok) throw new Error("Failed to delete document");
 }

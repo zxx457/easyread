@@ -470,8 +470,6 @@ const registerDocumentRoutes = (basePath) => {
       const sortSql = orderByToSql(safeOrderBy);
       const offset = (page - 1) * pageSize;
 
-      console.log(pageSize);
-
       const rows = db
         .prepare(
           `

@@ -67,7 +67,7 @@ export default function () {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
-  const pageSize = 5;
+  const pageSize = 10;
   const orderBy: DocOrderBy = "-created";
 
   useEffect(() => {

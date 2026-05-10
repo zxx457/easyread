@@ -37,6 +37,10 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     method: "DELETE",
   });
 
+  if (response.status === 204) {
+    return new Response(null, { status: 204 });
+  }
+
   const body = await response.text();
   return new Response(body, {
     status: response.status,
