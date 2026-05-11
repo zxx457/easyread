@@ -2,7 +2,7 @@
 
 import { CloudUploadIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,11 @@ export default function () {
       });
 
       toast.success("Document queued for processing.");
-      router.push("/docs");
+      // Do not call router.refresh() here: refresh targets the *current* URL and can
+      // interrupt soft navigation away from /docs/new. Let /docs load its own data.
+      startTransition(() => {
+        router.replace("/docs");
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected error while creating document.";
       toast.error(message);
