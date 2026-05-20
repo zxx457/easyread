@@ -1,6 +1,6 @@
 "use client";
 
-import { DownloadIcon, EditIcon, EllipsisIcon, LoaderCircleIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import { DownloadIcon, EditIcon, EllipsisIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { Checkbox as CheckBoxOriginal } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
 import { FuzzyTimeDisplay } from "@/components/common/fuzzy-time";
+import { LoadingSpinner } from "@/components/common/loading-spinner";
 import { Pagination } from "@/components/common/pagination";
 import { Doc, DocOrderBy, deleteDoc, fetchDocs } from "@/lib/api/docs";
 
@@ -25,9 +26,9 @@ function Checkbox(props: React.ComponentProps<typeof CheckBoxOriginal>) {
 function Actions({ doc, onDeleted }: { doc: Doc; onDeleted: (id: string) => void }) {
   if (doc.status === "pending") {
     return (
-      <div className="flex items-center justify-center text-xs">
-        <LoaderCircleIcon className="size-4 animate-spin" />
-        <span className="ml-[1ch]">Processing</span>
+      <div className="flex items-center justify-center gap-1 text-xs">
+        <LoadingSpinner className="text-muted-foreground size-4" label="Processing" />
+        <span>Processing</span>
       </div>
     );
   }
@@ -63,6 +64,7 @@ function Actions({ doc, onDeleted }: { doc: Doc; onDeleted: (id: string) => void
 
 export default function () {
   const [docs, setDocs] = useState<Doc[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -81,7 +83,8 @@ export default function () {
   useEffect(() => {
     let canceled = false;
 
-    const load = async () => {
+    const load = async (silent = false) => {
+      if (!silent) setIsLoading(true);
       try {
         const result = await fetchDocs({ search, page, pageSize, orderBy });
         if (canceled) return;
@@ -89,13 +92,15 @@ export default function () {
         setHasNextPage(result.hasNextPage);
       } catch {
         if (!canceled) toast.error("Failed to fetch documents");
+      } finally {
+        if (!canceled && !silent) setIsLoading(false);
       }
     };
 
     void load();
 
     const timer = setInterval(() => {
-      load().catch(() => {});
+      load(true).catch(() => {});
     }, 3000);
 
     return () => {
@@ -125,57 +130,66 @@ export default function () {
         </Button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full table-fixed [&_th]:box-content [&_th]:text-left [&_th]:last:text-right [&_th,td]:px-4 [&_th,td]:whitespace-nowrap [&_th,td]:first:pl-8 [&_th,td]:last:pr-8 [&_tr]:h-14">
-          <thead className="bg-muted text-muted-foreground border-y text-xs uppercase">
-            <tr>
-              <th scope="col" className="w-4">
-                <Checkbox className="bg-background" />
-              </th>
-              <th scope="col" className="w-auto">
-                Document Name
-              </th>
-              <th scope="col" className="w-40">
-                Last Modified
-              </th>
-              <th scope="col" className="w-22">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y border-b text-sm">
-            {docs.map((doc) => (
-              <tr key={doc.id}>
-                <td>
-                  <Checkbox />
-                </td>
-                <td>
-                  {doc.status === "pending" ? (
-                    <span className="text-muted-foreground cursor-default" title="Document is still processing">
-                      {doc.title}
-                    </span>
-                  ) : (
-                    <Link href={`/docs/${doc.id}`} className="hover:text-primary hover:underline">
-                      {doc.title}
-                    </Link>
-                  )}
-                </td>
-                <td>
-                  <FuzzyTimeDisplay value={doc.created} />
-                </td>
-                <td>
-                  <Actions doc={doc} onDeleted={(id) => setDocs((prev) => prev.filter((item) => item.id !== id))} />
-                </td>
+      {isLoading ? (
+        <div className="flex min-h-64 flex-col items-center justify-center gap-3 py-16">
+          <LoadingSpinner className="text-primary size-10" label="Loading documents" />
+          <p className="text-muted-foreground text-sm">Loading documents…</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full table-fixed [&_th]:box-content [&_th]:text-left [&_th]:last:text-right [&_th,td]:px-4 [&_th,td]:whitespace-nowrap [&_th,td]:first:pl-8 [&_th,td]:last:pr-8 [&_tr]:h-14">
+            <thead className="bg-muted text-muted-foreground border-y text-xs uppercase">
+              <tr>
+                <th scope="col" className="w-4">
+                  <Checkbox className="bg-background" />
+                </th>
+                <th scope="col" className="w-auto">
+                  Document Name
+                </th>
+                <th scope="col" className="w-40">
+                  Last Modified
+                </th>
+                <th scope="col" className="w-22">
+                  Actions
+                </th>
               </tr>
-            ))}
-            <tr className="not-first:hidden">
-              <td colSpan={4} className="text-center">
-                No Items
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y border-b text-sm">
+              {docs.map((doc) => (
+                <tr key={doc.id}>
+                  <td>
+                    <Checkbox />
+                  </td>
+                  <td>
+                    {doc.status === "pending" ? (
+                      <span className="text-muted-foreground cursor-default" title="Document is still processing">
+                        {doc.title}
+                      </span>
+                    ) : (
+                      <Link href={`/docs/${doc.id}`} className="hover:text-primary hover:underline">
+                        {doc.title}
+                      </Link>
+                    )}
+                  </td>
+                  <td>
+                    <FuzzyTimeDisplay value={doc.created} />
+                  </td>
+                  <td>
+                    <Actions doc={doc} onDeleted={(id) => setDocs((prev) => prev.filter((item) => item.id !== id))} />
+                  </td>
+                </tr>
+              ))}
+              {docs.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center">
+                    No Items
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <Pagination page={page} hasNextPage={hasNextPage} onPageChange={setPage} />
     </main>

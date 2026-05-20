@@ -43,3 +43,17 @@
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
+
+@keyframes spin-circle {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-circle {
+  animation: spin-circle 0.9s linear infinite;
+  transform-origin: center;
+}

@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { ImageGenerationOptions } from "@/components/app/image-generation-options";
+import { LoadingSpinner } from "@/components/common/loading-spinner";
 import { Doc, fetchDoc, updateDocTitle } from "@/lib/api/docs";
 import { fetchImages } from "@/lib/api/images";
 import { Section, fetchSections } from "@/lib/api/sections";
@@ -39,6 +40,26 @@ import { cn, pickFile } from "@/lib/utils";
 
 // implementation of this page is dirty.
 // this page is only for ui demonstration purpose, may be refactored later.
+
+function DocumentLoadingScreen() {
+  return (
+    <main className="flex h-[var(--page-height)] flex-col items-center justify-center gap-6 p-8">
+      <LoadingSpinner className="text-primary size-14" label="Loading document" />
+      <div className="flex max-w-sm flex-col items-center gap-2 text-center">
+        <p className="text-sm font-semibold">Loading document ... </p>
+        <p className="text-muted-foreground text-sm">Fetching sections and images. This may take a moment.</p>
+      </div>
+      <div className="flex w-full max-w-2xl flex-col gap-4">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="flex animate-pulse gap-4">
+            <div className="bg-muted aspect-[4/3] w-1/3 rounded" />
+            <div className="bg-muted flex-1 rounded" />
+          </div>
+        ))}
+      </div>
+    </main>
+  );
+}
 
 function LibraryImagePickerDialog({ section, forceRerender }: { section: Section; forceRerender: () => void }) {
   const [images] = useFetchedState([], fetchImages, []);
@@ -272,8 +293,8 @@ function DocMetadataEdit({
 
 export default function ({ params }: { params: Promise<{ id: string }> }) {
   const { id: doc_id } = React.use(params);
-  const [doc, setDoc] = useFetchedState(undefined, fetchDoc, [doc_id]);
-  const [sections, setSections] = useFetchedState([], fetchSections, [doc_id]);
+  const [doc, setDoc, isDocLoading] = useFetchedState(undefined, fetchDoc, [doc_id]);
+  const [sections, setSections, isSectionsLoading] = useFetchedState([], fetchSections, [doc_id]);
 
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
   const [state, setState] = useState(0);
@@ -281,8 +302,11 @@ export default function ({ params }: { params: Promise<{ id: string }> }) {
   const [_unused, _setUnused] = useState(0);
   const forceRerender = () => _setUnused((v) => v + 1);
   const isProcessing = doc?.status === "pending";
+  const isLoading = isDocLoading || isSectionsLoading;
 
   useEffect(() => {
+    if (isDocLoading) return;
+
     const timer = setInterval(() => {
       fetchDoc(doc_id)
         .then((latest) => setDoc(latest))
@@ -290,7 +314,11 @@ export default function ({ params }: { params: Promise<{ id: string }> }) {
     }, 3000);
 
     return () => clearInterval(timer);
-  }, [doc_id, setDoc]);
+  }, [doc_id, isDocLoading, setDoc]);
+
+  if (isLoading) {
+    return <DocumentLoadingScreen />;
+  }
 
   return (
     <main className="flex h-[var(--page-height)] flex-col">

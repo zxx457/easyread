@@ -7,7 +7,7 @@ export function useFetchedState<StateType, FetchParams extends any[]>(
   fetchParams: FetchParams,
   onData?: (data: StateType) => Promise<StateType> | StateType,
   onError?: (error: Error) => void,
-): [StateType, React.Dispatch<React.SetStateAction<StateType>>];
+): [StateType, React.Dispatch<React.SetStateAction<StateType>>, boolean];
 
 // Overload 2: StateType and FetchedDataType differ — onData required
 export function useFetchedState<StateType, FetchedDataType, FetchParams extends any[]>(
@@ -16,7 +16,7 @@ export function useFetchedState<StateType, FetchedDataType, FetchParams extends 
   fetchParams: FetchParams,
   onData: (data: FetchedDataType) => Promise<StateType> | StateType,
   onError?: (error: Error) => void,
-): [StateType, React.Dispatch<React.SetStateAction<StateType>>];
+): [StateType, React.Dispatch<React.SetStateAction<StateType>>, boolean];
 
 // Implementation
 export function useFetchedState<StateType, FetchedDataType, FetchParams extends any[]>(
@@ -25,8 +25,9 @@ export function useFetchedState<StateType, FetchedDataType, FetchParams extends 
   fetchParams: FetchParams,
   onData?: (data: FetchedDataType) => Promise<StateType> | StateType,
   onError?: (error: Error) => void,
-): [StateType, React.Dispatch<React.SetStateAction<StateType>>] {
+): [StateType, React.Dispatch<React.SetStateAction<StateType>>, boolean] {
   const [state, setState] = useState<StateType>(initialValue);
+  const [isLoading, setIsLoading] = useState(true);
 
   // defaults
   const finalOnData = onData ?? ((v: any) => v);
@@ -34,6 +35,7 @@ export function useFetchedState<StateType, FetchedDataType, FetchParams extends 
 
   useEffect(() => {
     let canceled = false;
+    setIsLoading(true);
 
     fetcher(...fetchParams)
       .then(finalOnData)
@@ -42,6 +44,9 @@ export function useFetchedState<StateType, FetchedDataType, FetchParams extends 
       })
       .catch((error) => {
         if (!canceled) finalOnError(error);
+      })
+      .finally(() => {
+        if (!canceled) setIsLoading(false);
       });
 
     return () => {
@@ -49,7 +54,7 @@ export function useFetchedState<StateType, FetchedDataType, FetchParams extends 
     };
   }, fetchParams);
 
-  return [state, setState];
+  return [state, setState, isLoading];
 }
 
 /*
